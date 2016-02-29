@@ -1,17 +1,21 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 )
 
-var address = ":8080"
+var address = flag.String("addr", ":8080", "bind address")
 
 func main() {
+	flag.Parse()
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(os.Stderr, "\n", r.Method, r.URL.Path)
+		fmt.Fprintln(os.Stderr, "\n"+r.Method, r.URL.Path)
 		for header := range r.Header {
 			value := r.Header.Get(header)
 			fmt.Fprintln(os.Stderr, ">", header, "=", value)
@@ -28,6 +32,12 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	fmt.Fprintln(os.Stderr, "Listening on", address)
-	http.ListenAndServe(address, nil)
+	listener, err := net.Listen("tcp", *address)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to bind to", *address, err)
+		return
+	}
+
+	fmt.Fprintln(os.Stderr, "Listening on", "http://"+listener.Addr().String())
+	http.Serve(listener, nil)
 }
